@@ -9,6 +9,8 @@
 
 Install Docker and Kurtosis.
 
+Make sure submodules are also cloned.
+
 ## Quickstart
 
 `./testfork.sh`
