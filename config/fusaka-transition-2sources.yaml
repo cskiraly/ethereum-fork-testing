@@ -1,0 +1,101 @@
+participants:
+  # - el_type: nethermind
+  #   el_image: ethpandaops/nethermind
+  # - el_type: reth
+  #   el_image: ethpandaops/reth
+  # - el_type: besu
+  #   el_image: ethpandaops/besu
+  - el_type: geth
+    # el_image: ethpandaops/geth
+    el_image: ethereum/client-go:latest
+    # el_image: client-go:localbuild
+    el_log_level: debug
+    el_extra_params:
+      - "--netrestrict=172.16.0.0/12"
+      - "--log.vmodule=core/txpool/blobpool/*=5,eth/fetcher/*=5"
+    # cl_type: prysm
+    # cl_image: ethpandaops/prysm-beacon-chain:develop
+    # cl_extra_params:
+    #   - --p2p-max-peers=4
+    cl_type: lighthouse
+    # cl_image: ethpandaops/lighthouse:unstable
+    cl_image: ethpandaops/lighthouse:unstable-4efe47b
+    cl_log_level: info
+    supernode: true
+    count: 2
+#    cl_type: prysm
+#    cl_image: ethpandaops/prysm-beacon-chain:fusaka-devnet-3
+#      supernode: true
+#    - cl_type: grandine
+#      cl_image: ethpandaops/grandine:peerdas-fulu
+#      supernode: true
+#    - cl_type: teku
+#      cl_image: ethpandaops/teku:master
+#      supernode: true
+network_params:
+  fulu_fork_epoch: 1
+  bpo_1_epoch: 2
+  bpo_1_max_blobs: 48
+  bpo_1_target_blobs: 48
+  withdrawal_type: "0x02"
+  genesis_delay: 40
+  seconds_per_slot: 6
+
+additional_services:
+  - dora
+  - spamoor
+  - prometheus
+  - grafana
+#pull through cache to not get rate limited by dockerhub
+#docker_cache_params:
+#  enabled: true
+#  url: "docker.ethquokkaops.io"
+
+spamoor_params:
+  image: ethpandaops/spamoor:master
+  # image: spamoor:localbuild
+  max_mem: 8000
+  extra_args:
+    verbose: true
+    #trace : true
+  spammers:
+    # - scenario: eoatx
+    #   config:
+    #     throughput: 200
+    - scenario: blobs
+      name: "Submit to node 1"
+      config:
+        throughput: 48
+        #throughput_increment_interval: 36
+        log_txs: true
+        max_wallets: 1 # default is to use many wallets
+        client_group: "1" # send all blobs to node 1, instead of round robin
+        submit_count: 1  # submit each tx to 1 client only
+        max_pending: 16
+        rebroadcast: 0  # disable rebroadcast
+    - scenario: blobs
+      name: "Submit to node 2"
+      config:
+        throughput: 48
+        #throughput_increment_interval: 36
+        log_txs: true
+        max_wallets: 1 # default is to use many wallets
+        client_group: "2" # send all blobs to node 1, instead of round robin
+        submit_count: 1  # submit each tx to 1 client only
+        max_pending: 16
+        rebroadcast: 0  # disable rebroadcast
+
+port_publisher: # make sure port numbers are stable across restarts
+  #nat_exit_ip: "auto" # not working without hairpin NAT
+  el:
+    enabled: true
+  cl:
+    enabled: true
+  additional_services:
+    enabled: true
+  other:
+    enabled: true
+
+# grafana_params:
+#   # A list of locators for grafana dashboards to be loaded be the grafana service
+#   additional_dashboards: [../../geth-dashboard.json]

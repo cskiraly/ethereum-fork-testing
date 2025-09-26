@@ -13,7 +13,7 @@ Make sure submodules are also cloned.
 
 ## Quickstart
 
-`./testfork.sh`
+`./testfork.sh config/fusaka-transition-1source.yaml timing/network-disrupt-at-fork.sh`
 
 ## Licence
 

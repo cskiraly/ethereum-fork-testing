@@ -1,4 +1,31 @@
 #!/bin/bash
+
+# This script is used to test the fork transition in a Kurtosis enclave.
+# It loads a kurtosis setup and a network configuration timeline, runs these
+# while collecting logs and analyzing results.
+
+# Usage: ./testfork.sh <config-file> <timing-script>
+
+#process command line arguments
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <config-file> <timing-script>"
+    exit 1
+fi
+config_file="$1"
+timing_script="$2"
+
+if [ ! -f "$config_file" ]; then
+    echo "Config file '$config_file' not found!"
+    exit 1
+fi
+if [ ! -f "$timing_script" ]; then
+    echo "Timing script '$timing_script' not found!"
+    exit 1
+fi
+
+enclave_name="test-fusaka-transition"
+logfile="${config_file%.*}.log"
+
 set -e
 set -o pipefail
 
@@ -6,19 +33,8 @@ kill_silent() {
     kill "$@" 2>/dev/null || true
 }
 
-
 # add trap to catch exit signals and stop the enclave and background scripts
 trap 'kill_silent $timing_pid; kill_silent $progress_pid; kurtosis enclave stop $enclave_name' EXIT
-
-# This script is used to test the fusaka transition setup in a Kurtosis enclave.
-# It runs the Ethereum package in a new enclave, waits for 2 minutes to allow logs
-# to accumulate, and then collects and filters the logs from each node to display
-# any ERROR or WARN messages.
-
-config_file="test-fusaka-transition-01.yaml"
-timing_file="timing-01.yaml"
-enclave_name="test-fusaka-transition"
-logfile="${config_file%.*}.log"
 
 # get timing from the config file
 # format:
@@ -35,21 +51,22 @@ genesis_delay=$(grep 'genesis_delay:' $config_file | awk '{print $2}')
 seconds_per_slot=$(grep 'seconds_per_slot:' $config_file | awk '{print $2}')
 fulu_fork_epoch=$(grep 'fulu_fork_epoch:' $config_file | awk '{print $2}')
 slots_per_epoch=32
-
 node_count=$(grep -w 'count:' $config_file | awk '{print $2}')
 
 # make sure we have sudo permissions for tc
 echo "Requesting sudo permissions to run tc on containers ... run at your own risk!"
 sudo -v
 
-# Remove any existing enclave with the same name to ensure a clean start
-kurtosis enclave rm -f $enclave_name || true
+# If exists, remove any existing enclave with the same name to ensure a clean start
+if [ "$(kurtosis enclave ls | grep -w $enclave_name | wc -l)" -ne 0 ]; then
+    kurtosis enclave rm -f $enclave_name
+fi
 
 # Start a new enclave with the specified configuration file
 kurtosis run --enclave $enclave_name github.com/ethpandaops/ethereum-package --args-file $config_file
 
-# start timing script in the background, get it\s pid so we can wait for it later
-./timing-01.sh $config_file &
+# start timing script in the background, get its pid so we can wait for it later
+./$timing_script $config_file &
 timing_pid=$!
 echo "timing script started in the background with pid $timing_pid"
 
@@ -90,7 +107,7 @@ get_progress() {
 while true; do
     progress=$(get_progress)
     echo -e "Current block numbers on all nodes:$progress"
-    sleep $seconds_per_slot
+    sleep 1
     tput cuu $((node_count+1)) && tput ed
 done
 ) &
