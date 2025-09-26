@@ -8,6 +8,7 @@ set -o pipefail
 # any ERROR or WARN messages.
 
 config_file="test-fusaka-transition-01.yaml"
+timing_file="timing-01.yaml"
 enclave_name="test-fusaka-transition"
 logfile="${config_file%.*}.log"
 
@@ -39,25 +40,14 @@ kurtosis enclave rm -f $enclave_name || true
 # Start a new enclave with the specified configuration file
 kurtosis run --enclave $enclave_name github.com/ethpandaops/ethereum-package --args-file $config_file
 
-# Timing:
-# - 40 seconds before genesis
-# - 6 second slots, 32 slots per epoch => 192 seconds per epoch
-# - wait until 6 slots before the fork (fulu_fork_epoch)
-wait_time=$((genesis_delay + seconds_per_slot * (slots_per_epoch * fulu_fork_epoch - 6) ))
-echo "Waiting for the last few slots before the fork...($wait_time seconds)"
-sleep $wait_time
+# start timing script in the background, get it\s pid so we can wait for it later
+./timing-01.sh $config_file &
+timing_pid=$!
+echo "timing script started in the background with pid $timing_pid"
 
-wait_time=$((seconds_per_slot * 12))
-echo "simulation network issues for 12 slots...($wait_time seconds)"
-sudo ethereum-kurtosis-tc/bin/kurtosis-tc.sh -e --delay=2000ms --uplink=100kbps --downlink=100kbps
-sudo ethereum-kurtosis-tc/bin/kurtosis-tc.sh -c --delay=2000ms --uplink=100kbps --downlink=100kbps
-sleep $wait_time
-echo "removing network issues"
-sudo ethereum-kurtosis-tc/bin/kurtosis-tc.sh -e --delete
-sudo ethereum-kurtosis-tc/bin/kurtosis-tc.sh -c --delete
 
-echo "Waiting for 1 minute to allow logs to accumulate..."
-sleep 60
+# wait for timing script to finish
+wait $timing_pid
 
 # Generate merged EL logs from all nodes
 for node in $(seq 1 $node_count); do
