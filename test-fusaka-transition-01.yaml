@@ -1,14 +1,14 @@
 participants:
-#  - el_type: nethermind
-#    el_image: ethpandaops/nethermind:fusaka-devnet-3
-#    - el_type: reth
-#      el_image: ethpandaops/reth:fusaka-devnet1
-#    - el_type: besu
-#      el_image: ethpandaops/besu:fusaka-devnet-1
+  # - el_type: nethermind
+  #   el_image: ethpandaops/nethermind
+  # - el_type: reth
+  #   el_image: ethpandaops/reth
+  # - el_type: besu
+  #   el_image: ethpandaops/besu
   - el_type: geth
-#    el_image: ethpandaops/geth:fusaka-devnet-3
-#    el_image: ethereum/client-go:release-1.15
-    el_image: client-go:localbuild
+    # el_image: ethpandaops/geth
+    el_image: ethereum/client-go:latest
+    # el_image: client-go:localbuild
     el_log_level: debug
     el_extra_params:
       - "--netrestrict=172.16.0.0/12"
@@ -16,7 +16,7 @@ participants:
     # cl_type: prysm
     # cl_image: ethpandaops/prysm-beacon-chain:develop
     # cl_extra_params:
-    #   - --p2p-max-peers=2
+    #   - --p2p-max-peers=4
     cl_type: lighthouse
     # cl_image: ethpandaops/lighthouse:unstable
     cl_image: ethpandaops/lighthouse:unstable-4efe47b
@@ -52,7 +52,7 @@ additional_services:
 #  url: "docker.ethquokkaops.io"
 
 spamoor_params:
-  image: spamoor:localbuild
+  # image: spamoor:localbuild
   max_mem: 8000
   extra_args:
     verbose: true
@@ -62,6 +62,7 @@ spamoor_params:
     #   config:
     #     throughput: 200
     - scenario: blobs
+      name: "Submit to node 1"
       config:
         throughput: 48
         #throughput_increment_interval: 36

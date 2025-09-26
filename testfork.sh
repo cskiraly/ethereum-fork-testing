@@ -67,7 +67,7 @@ done | sort -s -k3,3 > $logfile
 echo -e "\nChecking for conversion logs"
 grep -i "conver" $logfile || echo "No conversion logs found"
 
-echo -e "\nChecking errors"
+echo -e "\nChecking for errors"
 grep -i "ERROR" $logfile || echo "No ERROR logs found"
 
 # stop the enclave, but keep the data for further investigation if needed
