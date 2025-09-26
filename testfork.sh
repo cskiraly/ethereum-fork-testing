@@ -2,6 +2,14 @@
 set -e
 set -o pipefail
 
+kill_silent() {
+    kill "$@" 2>/dev/null || true
+}
+
+
+# add trap to catch exit signals and stop the enclave and background scripts
+trap 'kill_silent $timing_pid; kill_silent $progress_pid; kurtosis enclave stop $enclave_name' EXIT
+
 # This script is used to test the fusaka transition setup in a Kurtosis enclave.
 # It runs the Ethereum package in a new enclave, waits for 2 minutes to allow logs
 # to accumulate, and then collects and filters the logs from each node to display
@@ -104,5 +112,4 @@ grep -i "conver" $logfile || echo "No conversion logs found"
 echo -e "\nChecking for errors"
 grep -i "ERROR" $logfile || echo "No ERROR logs found"
 
-# stop the enclave, but keep the data for further investigation if needed
-kurtosis enclave stop $enclave_name
+# enclave is stopped by the trap, but we keep the data for further investigation if needed
