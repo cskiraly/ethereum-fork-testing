@@ -45,9 +45,53 @@ kurtosis run --enclave $enclave_name github.com/ethpandaops/ethereum-package --a
 timing_pid=$!
 echo "timing script started in the background with pid $timing_pid"
 
+# get_node_progress() {
+#     node=$1
+#     block_number=$(docker exec $(docker ps --filter name=^/el-0*$node --quiet) \
+#         geth attach --datadir='data/geth/execution-data' --exec 'eth.blockNumber')
+#     echo -e "el-$node:\t$block_number"
+# }
+
+get_node_progress() {
+    node=$1
+    container_id=$(docker ps --filter name=^/el-0*$node --quiet)
+    rpc_port=$(docker port $container_id 8545/tcp | cut -d: -f2)
+    block_number=$(curl -s -X POST -H "Content-Type: application/json" \
+        -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+        http://localhost:$rpc_port | jq -r .result)
+    txpool_status=$(curl -s -X POST -H "Content-Type: application/json" \
+        -d '{"jsonrpc":"2.0","method":"txpool_status","params":[],"id":1}' \
+        http://localhost:$rpc_port | jq -r .result)
+    txpool_pending=$(echo $txpool_status | jq -r .pending)
+    txpool_queued=$(echo $txpool_status | jq -r .queued)
+    echo -e "el-$node:\tBlock:$((16#${block_number:2})) | \
+    PendingTXs:$((16#${txpool_pending:2})) | \
+    Queued TXs: $((16#${txpool_queued:2}))"
+}
+
+get_progress() {
+    local progress=""
+    for node in $(seq 1 $node_count); do
+        progress="$progress\nel-$node:\t$(get_node_progress $node)"
+    done
+    echo -e "$progress"
+}
+
+# show some progress indicator by getting selected metrics from el nodes
+(
+while true; do
+    progress=$(get_progress)
+    echo -e "Current block numbers on all nodes:$progress"
+    sleep $seconds_per_slot
+    tput cuu $((node_count+1)) && tput ed
+done
+) &
+progress_pid=$!
 
 # wait for timing script to finish
 wait $timing_pid
+# kill the progress indicator
+kill $progress_pid || true
 
 # Generate merged EL logs from all nodes
 for node in $(seq 1 $node_count); do
