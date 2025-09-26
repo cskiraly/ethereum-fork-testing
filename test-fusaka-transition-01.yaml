@@ -52,6 +52,7 @@ additional_services:
 #  url: "docker.ethquokkaops.io"
 
 spamoor_params:
+  image: ethpandaops/spamoor:master
   # image: spamoor:localbuild
   max_mem: 8000
   extra_args:
